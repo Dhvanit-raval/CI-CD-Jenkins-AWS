@@ -1,7 +1,7 @@
 node {
     def appDir = '/var/www/nextjs-app/my-app'
 
-    stage('Clean workspcae') {
+    stage('Clean workspace') {
         echo 'Cleaning workspace...'
         deleteDir()
     }
@@ -20,11 +20,16 @@ node {
             rsync -av --delete --exclude='.git' --exclude='node_modules' ./ ${appDir}/
 
             cd ${appDir}
-            sudo npm install
-            sudo npm run build
-            sudo fuser -k 3000/tcp || true
-            nohup npm run start > app.log 2>&1 &
 
+            # Install dependencies with lower memory footprint
+            npm install --no-audit --prefer-offline
+            npm run build
+
+            # Stop previous running server on port 3000
+            sudo fuser -k 3000/tcp || true
+
+            # Start Next.js app in background
+            JENKINS_NODE_COOKIE=dontKillMe nohup npm run start > app.log 2>&1 &
         """
     }
 }
